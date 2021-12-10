@@ -1,64 +1,69 @@
 #include <RH_ASK.h>    // incluye libreria RadioHead.h
 #include <SPI.h>    // incluye libreria SPI necesaria por RadioHead.h
-//SoftwareSerial 
-int sensor_IN = 9;
-int sensor_OUT = 11;
-int led=13;
 
-boolean gancho;
+int sensor_IN = 9;//Sensor de entrada
+int sensor_OUT = 11;//sensor de salida
+int led=13;//Led de prueba para comprobar los datos en el emisor
+char val;//variable para bluetooth
+boolean gancho;// variable para while
 //pin 12 para data de emisor
 
 RH_ASK rf_driver;   // crea objeto para modulacion por ASK
 
-void setup() 
+void setup() //Configuracion de entradas, salidas y velocidad de comunicación
 {
   rf_driver.init();   // inicializa objeto con valores por defecto
   pinMode(sensor_IN, INPUT);
   pinMode(sensor_OUT, INPUT);
   pinMode (led, OUTPUT);
-  delay(5000);
+  delay(2000);//delay para comenzar el programa
   Serial.begin (9600);
-  //digitalWrite(led, LOW);
   }
 
 void loop() {
-  static char val;
   //BLUETOOTH
-  if( Serial.available() ) {
-  val = Serial.read();
-  
-  if( val == '0' )
-  { 
-   Serial.print("SALIENDO ");
-   Serial.println(val);
-  }
-  
-  if( val == '3' )
-  { 
-   Serial.print("ENTRANDO ");
-   Serial.println(val);
-//   gancho=true; 
-//   while (gancho==true){
-     //EMISOR_RF Y SENSORES
-  
-      if (digitalRead(sensor_IN) == HIGH){
-        const char *msg = "1";  // puntero de mensaje a emitir
-        rf_driver.send((uint8_t *)msg, strlen(msg));// funcion para envio del mensaje
-        rf_driver.waitPacketSent();     // espera al envio correcto
-        delay(4000);        // demora de 1 segundo entre envios
-        Serial.println("Movimiento detectado ");}
+  if( Serial.available() ) {//Pregunta si hay algún dispositivo conectado al HC-05
+  val = Serial.read();//Lee los datos enviados a través del celular
+    switch (val){
+      case '0': 
+              Serial.print("SALIENDO ");
+              Serial.println(val);
+      break;
     
-     if (digitalRead(sensor_OUT) == HIGH){
-        const char *msg = "2";  // puntero de mensaje a emitir
-        rf_driver.send((uint8_t *)msg, strlen(msg));// funcion para envio del mensaje
-        rf_driver.waitPacketSent();     // espera al envio correcto
-        delay(4000);        // demora de 1 segundo entre envios
-        Serial.println("Movimiento de de salida detectado "); 
-//        gancho=false;
-     }
+      case '3':
+              Serial.print("ENTRANDO ");
+              Serial.println(val);
+              gancho=true; 
+              while (gancho==true){//ciclo para mantener la opción de ON activa
+               
+               //EMISOR_RF Y SENSORES
+                  if (digitalRead(sensor_IN) == HIGH){
+                  const char *msg = "1";  // puntero de mensaje a emitir
+                  rf_driver.send((uint8_t *)msg, strlen(msg));// funcion para envio del mensaje
+                  rf_driver.waitPacketSent();     // espera al envio correcto
+                  Serial.println("Movimiento detectado ");
+                  delay(7000);}
+            
+                if (digitalRead(sensor_OUT) == HIGH){
+                   const char *msg = "2";  // puntero de mensaje a emitir
+                   rf_driver.send((uint8_t *)msg, strlen(msg));// funcion para envio del mensaje
+                   rf_driver.waitPacketSent();     // espera al envio correcto
+                   Serial.println("Movimiento de de salida detectado "); 
+                   delay(7000);
+                }
+                val = Serial.read();
+                if(val=='0'){//Para salir del while solo consulta si desde la aplicación ya se envió la instruccion de OFF
+                   gancho=false;
+                   Serial.print("SALIENDO ");
+                   Serial.println(val);
+                }
+             }
+      break;
+          }
+       }
     }
-  } 
- } 
+
+ 
 
 
 /*
